@@ -3,6 +3,8 @@ package quip
 import (
 	"bufio"
 	"io"
+
+	"github.com/xdg/maybe"
 )
 
 // Parser provides quick line, word, character, etc. parsing against an
@@ -11,35 +13,29 @@ type Parser struct {
 	r io.Reader
 }
 
-// LinesT is a variant type representing either a slice of strings or an error
-type LinesT struct {
-	ss  []string
-	err error
-}
-
-// New construct a new quip.Parser from an io.Reader
+// New constructs a new quip.Parser from an io.Reader.
 func New(r io.Reader) *Parser {
 	return &Parser{r: r}
 }
 
 // Lines returns a LinesT representing either lines of the input or an error.
 func (p Parser) Lines() LinesT {
-	ss := make([]string, 0)
+	slice := make([]string, 0)
 	scanner := bufio.NewScanner(p.r)
 
 	for scanner.Scan() {
-		ss = append(ss, scanner.Text())
+		slice = append(slice, scanner.Text())
 	}
 
 	if err := scanner.Err(); err != nil {
-		return LinesT{err: err}
+		return LinesT{AoS: maybe.ErrAoS(err)}
 	}
 
-	return LinesT{ss: ss}
+	return LinesT{AoS: maybe.JustAoS(slice)}
 }
 
-// Unbox returns the underlying slice of strings and error.  One or the other
-// will be nil.
-func (lt LinesT) Unbox() ([]string, error) {
-	return lt.ss, lt.err
+// Words returns a WordsT representing either all words from all lines of the
+// input or an error.
+func (p Parser) Words() WordsT {
+	return p.Lines().Words()
 }

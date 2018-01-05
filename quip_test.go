@@ -9,28 +9,49 @@ import (
 	"github.com/xdg/testy"
 )
 
-var TestStrings = []string{"Line one", "Line two", "Line three"}
-var TestInput = strings.Join(TestStrings, "\n")
+var dataLines = []string{"Line one", "Line two", "Line three"}
+var dataWords = []string{"Line", "one", "Line", "two", "Line", "three"}
+var dataInput = strings.Join(dataLines, "\n")
 
-func TestNew(t *testing.T) {
-	is := testy.New(t)
-	defer func() { t.Logf(is.Done()) }()
-
-	var b bytes.Buffer
-	q := quip.New(&b)
-
-	is.NotNil(q)
+func newQuip(s string) *quip.Parser {
+	b := bytes.NewBufferString(s)
+	return quip.New(b)
 }
 
-func TestLines(t *testing.T) {
+func TestEmpty(t *testing.T) {
 	is := testy.New(t)
 	defer func() { t.Logf(is.Done()) }()
 
-	b := bytes.NewBufferString(TestInput)
-	q := quip.New(b)
+	q := newQuip("")
 
+	is.NotNil(q)
 	ss, err := q.Lines().Unbox()
 	is.Nil(err)
-	is.Equal(ss, TestStrings)
+	is.Equal(ss, []string{})
+}
+
+func TestParser(t *testing.T) {
+	is := testy.New(t)
+	defer func() { t.Logf(is.Done()) }()
+
+	q := newQuip(dataInput)
+
+	// Lines from Parser
+	lines := q.Lines()
+	ss, err := lines.Unbox()
+	is.Nil(err)
+	is.Equal(ss, dataLines)
+
+	// Words from Lines
+	words := lines.Words()
+	wfl, err := words.Unbox()
+	is.Nil(err)
+	is.Equal(wfl, dataWords)
+
+	// Words from Parser
+	q = newQuip(dataInput)
+	wfp, err := q.Words().Unbox()
+	is.Nil(err)
+	is.Equal(wfp, dataWords)
 
 }
