@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/xdg/maybe"
 	"github.com/xdg/quip"
 	"github.com/xdg/testy"
 )
@@ -18,40 +19,45 @@ func newQuip(s string) *quip.Parser {
 	return quip.New(b)
 }
 
-func TestEmpty(t *testing.T) {
+func TestStringsToWords(t *testing.T) {
 	is := testy.New(t)
 	defer func() { t.Logf(is.Done()) }()
 
-	q := newQuip("")
-
-	is.NotNil(q)
-	ss, err := q.Lines().Unbox()
+	// Words from Lines
+	lines := maybe.JustAoS(dataLines)
+	words := lines.Bind(quip.StringsToWords)
+	wfl, err := words.Unbox()
 	is.Nil(err)
-	is.Equal(ss, []string{})
+	is.Equal(wfl, dataWords)
 }
 
 func TestParser(t *testing.T) {
 	is := testy.New(t)
 	defer func() { t.Logf(is.Done()) }()
 
-	q := newQuip(dataInput)
+	// Empty input
+	{
+		q := newQuip("")
+		ss, err := q.Lines().Unbox()
+		is.Nil(err)
+		is.Equal(ss, []string{})
+	}
 
 	// Lines from Parser
-	lines := q.Lines()
-	ss, err := lines.Unbox()
-	is.Nil(err)
-	is.Equal(ss, dataLines)
-
-	// Words from Lines
-	words := lines.Words()
-	wfl, err := words.Unbox()
-	is.Nil(err)
-	is.Equal(wfl, dataWords)
+	{
+		q := newQuip(dataInput)
+		lines := q.Lines()
+		ss, err := lines.Unbox()
+		is.Nil(err)
+		is.Equal(ss, dataLines)
+	}
 
 	// Words from Parser
-	q = newQuip(dataInput)
-	wfp, err := q.Words().Unbox()
-	is.Nil(err)
-	is.Equal(wfp, dataWords)
+	{
+		q := newQuip(dataInput)
+		wfp, err := q.Words().Unbox()
+		is.Nil(err)
+		is.Equal(wfp, dataWords)
+	}
 
 }

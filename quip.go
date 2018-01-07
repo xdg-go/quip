@@ -3,6 +3,7 @@ package quip
 import (
 	"bufio"
 	"io"
+	"strings"
 
 	"github.com/xdg/maybe"
 )
@@ -18,8 +19,8 @@ func New(r io.Reader) *Parser {
 	return &Parser{r: r}
 }
 
-// Lines returns a LinesT representing either lines of the input or an error.
-func (p Parser) Lines() LinesT {
+// Lines returns an AoS representing either lines of the input or an error.
+func (p Parser) Lines() maybe.AoS {
 	slice := make([]string, 0)
 	scanner := bufio.NewScanner(p.r)
 
@@ -28,14 +29,28 @@ func (p Parser) Lines() LinesT {
 	}
 
 	if err := scanner.Err(); err != nil {
-		return LinesT{AoS: maybe.ErrAoS(err)}
+		return maybe.ErrAoS(err)
 	}
 
-	return LinesT{AoS: maybe.JustAoS(slice)}
+	return maybe.JustAoS(slice)
 }
 
-// Words returns a WordsT representing either all words from all lines of the
+// Words returns an AoS representing either all words from all lines of the
 // input or an error.
-func (p Parser) Words() WordsT {
-	return p.Lines().Words()
+func (p Parser) Words() maybe.AoS {
+	return p.Lines().Bind(StringsToWords)
+}
+
+// StringsToWords is a Bind function to convert a slice of strings to an AoS
+// of whitespace-separated words.
+// XXX if xs is nil, needs to return ErrAoS
+func StringsToWords(xs []string) maybe.AoS {
+	words := make([]string, 0)
+	for _, v := range xs {
+		ys := strings.Fields(v)
+		if len(ys) > 0 {
+			words = append(words, ys...)
+		}
+	}
+	return maybe.JustAoS(words)
 }
