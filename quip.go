@@ -3,6 +3,7 @@ package quip
 import (
 	"bufio"
 	"io"
+	"os"
 	"strings"
 
 	"github.com/xdg/maybe"
@@ -19,17 +20,43 @@ func New(r io.Reader) *Parser {
 	return &Parser{r: r}
 }
 
+// NewFile constructs a new quip.Parser from a filename
+func NewFile(name string) (*Parser, error) {
+	r, err := os.Open(name)
+	if err != nil {
+		return nil, err
+	}
+	return &Parser{r: r}, nil
+}
+
 // Lines returns an AoS representing either lines of the input or an error.
+// Delimiting "\n" or "\r\n" are not included.  If the input reader is
+// empty, a valid, but empty result is returned.
 func (p Parser) Lines() maybe.AoS {
 	slice := make([]string, 0)
-	scanner := bufio.NewScanner(p.r)
+	rdr := bufio.NewReader(p.r)
 
-	for scanner.Scan() {
-		slice = append(slice, scanner.Text())
+	// Check for empty/bad reader
+	_, err := rdr.Peek(1)
+	if err != nil {
+		if err == io.EOF {
+			return maybe.JustAoS(slice)
+		}
+		return maybe.ErrAoS(err)
 	}
 
-	if err := scanner.Err(); err != nil {
-		return maybe.ErrAoS(err)
+LOOP:
+	for {
+		s, err := rdr.ReadString('\n')
+		switch {
+		case err == nil:
+			slice = append(slice, strings.TrimRight(s, "\r\n"))
+		case err == io.EOF:
+			slice = append(slice, strings.TrimRight(s, "\r\n"))
+			break LOOP
+		default:
+			return maybe.ErrAoS(err)
+		}
 	}
 
 	return maybe.JustAoS(slice)
